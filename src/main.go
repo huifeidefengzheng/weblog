@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"log"
 )
 
 type User struct {
@@ -32,8 +33,18 @@ func main() {
 
 	router := gin.Default()
 	router.GET("/user/query/all", func(c *gin.Context) {
+		// 创建页面 start limit map指针
+		var page = struct {
+			Start int `form:"start"`
+			Limit int `form:"limit"`
+		}{}
+		if err := c.ShouldBind(&page); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		log.Println("start:", page.Start, "limit:", page.Limit)
 		var users []User
-		db.Find(&users)
+		db.Debug().Table("users").Limit(page.Limit).Offset(page.Start).Find(&users)
 		c.JSON(200, gin.H{
 			"data":    users,
 			"status":  "success",
@@ -101,6 +112,37 @@ func main() {
 			"data":    user.ID,
 			"status":  "success",
 			"message": "success",
+		})
+	})
+
+	// 删除用户
+	router.POST("/user/delete", func(c *gin.Context) {
+		var json User
+		if err := c.ShouldBindJSON(&json); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		if json.ID == 0 {
+			c.JSON(400, gin.H{
+				"status":  "用户ID不能为空",
+				"message": "用户ID不能为空",
+			})
+			return
+		}
+		var user User
+		db.Table("users").Where("id = ?", json.ID).First(&user)
+		if user.ID == 0 {
+			c.JSON(400, gin.H{
+				"status":  "用户不存在",
+				"message": "用户不存在",
+			})
+			return
+		}
+		db.Table("users").Where("id = ?", json.ID).Delete(&user)
+		c.JSON(200, gin.H{
+			"data":    user.ID,
+			"status":  "success",
+			"message": "delete user success",
 		})
 	})
 	router.Run(":8080")
