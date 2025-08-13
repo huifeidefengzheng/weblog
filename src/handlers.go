@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"log"
 )
@@ -19,6 +20,10 @@ func QueryAll(db *gorm.DB, c *gin.Context) {
 	log.Println("start:", page.Start, "limit:", page.Limit)
 	var users []User
 	db.Debug().Table("users").Limit(page.Limit).Offset(page.Start).Find(&users)
+	// 将user的password改成空
+	for i := range users {
+		users[i].Password = ""
+	}
 	c.JSON(200, gin.H{
 		"data":    users,
 		"status":  "success",
@@ -32,18 +37,25 @@ func CreateUser(db *gorm.DB, c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	db.Table("users").Where("name = ?", json.Name).First(&json)
-	if json.ID != 0 {
+	// 加密密码
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(json.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "密码加密失败"})
+		return
+	}
+	var existUser User
+	db.Table("users").Where("username = ?", json.Username).First(&existUser)
+	if existUser.ID != 0 {
 		c.JSON(400, gin.H{
-			"status":  "用户名称已存在",
-			"message": json.Name,
+			"status":  "用户名已存在",
+			"message": json.Username,
 		})
 		return
 	}
 	var email = json.Email
 	var user = User{
-		Name:     json.Name,
-		Password: json.Password,
+		Username: json.Username,
+		Password: string(hashedPassword),
 		Email:    email,
 	}
 	db.Create(&user)
@@ -73,19 +85,27 @@ func UpdateUser(db *gorm.DB, c *gin.Context) {
 	db.Table("users").Where("id = ?", json.ID).First(&user)
 	if user.ID == 0 {
 		c.JSON(400, gin.H{
-			"status":  "用户不存在",
+			"status":  "fail",
 			"message": "用户不存在",
 		})
 		return
 	}
-	user.Name = json.Name
-	user.Password = json.Password
+	// 加密密码
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(json.Password), bcrypt.DefaultCost)
+	hashedPasswordstr := string(hashedPassword)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "密码加密失败"})
+		return
+	}
+
+	user.Username = json.Username
+	user.Password = hashedPasswordstr
 	user.Email = json.Email
 	db.Table("users").Where("id = ?", json.ID).Updates(&user)
 	c.JSON(200, gin.H{
 		"data":    user.ID,
 		"status":  "success",
-		"message": "success",
+		"message": "update user success",
 	})
 }
 
@@ -118,3 +138,15 @@ func DeleteUser(db *gorm.DB, c *gin.Context) {
 		"message": "delete user success",
 	})
 }
+
+/*func CreatePosts(db *gorm.DB, c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+	var json Post
+	if err := c.ShouldBindJSON(&json); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	json.UserID = userID
+	var user User
+
+}*/

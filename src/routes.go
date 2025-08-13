@@ -16,14 +16,47 @@ func AppRun(db *gorm.DB) {
 		pubilcApi.POST("/create", func(c *gin.Context) {
 			CreateUser(db, c)
 		})
-		pubilcApi.POST("/update", func(c *gin.Context) {
+		pubilcApi.POST("/login", func(c *gin.Context) {
+			LoginUser(c, db)
+		})
+
+	}
+	authUserApi := router.Group("/user")
+	authUserApi.Use(AuthMiddleware())
+	{
+		authUserApi.POST("/update", func(c *gin.Context) {
+			UpdateUser(db, c)
+		})
+		authUserApi.POST("/delete", func(c *gin.Context) {
+			DeleteUser(db, c)
+		})
+
+	}
+
+	/*PostsApi := router.Group("/posts")
+	{
+		PostsApi.POST("/update", func(c *gin.Context) {
 			UpdateUser(db, c)
 		})
 
-		pubilcApi.POST("/delete", func(c *gin.Context) {
+		PostsApi.POST("/delete", func(c *gin.Context) {
 			DeleteUser(db, c)
 		})
-	}
+		PostsApi.GET("/query/all", func(c *gin.Context) {
+			QueryAllPosts(db, c)
+		})
+
+		PostsApi.POST("/create", func(c *gin.Context) {
+			CreatePosts(db, c)
+		})
+		PostsApi.POST("/update", func(c *gin.Context) {
+			UpdatePosts(db, c)
+		})
+
+		PostsApi.POST("/delete", func(c *gin.Context) {
+			DeletePosts(db, c)
+		})
+	}*/
 
 	router.Run(":8080")
 }
