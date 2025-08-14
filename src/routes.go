@@ -24,6 +24,9 @@ func AppRun(db *gorm.DB) {
 	authUserApi := router.Group("/user")
 	authUserApi.Use(AuthMiddleware())
 	{
+		authUserApi.GET("/query/:id", func(c *gin.Context) {
+			QueryUserById(db, c)
+		})
 		authUserApi.POST("/update", func(c *gin.Context) {
 			UpdateUser(db, c)
 		})
@@ -33,30 +36,26 @@ func AppRun(db *gorm.DB) {
 
 	}
 
-	/*PostsApi := router.Group("/posts")
+	PostsApi := router.Group("/posts")
+	PostsApi.Use(AuthMiddleware())
 	{
-		PostsApi.POST("/update", func(c *gin.Context) {
-			UpdateUser(db, c)
-		})
-
-		PostsApi.POST("/delete", func(c *gin.Context) {
-			DeleteUser(db, c)
+		PostsApi.POST("/create", func(c *gin.Context) {
+			CreatePosts(db, c)
 		})
 		PostsApi.GET("/query/all", func(c *gin.Context) {
 			QueryAllPosts(db, c)
-		})
-
-		PostsApi.POST("/create", func(c *gin.Context) {
-			CreatePosts(db, c)
 		})
 		PostsApi.POST("/update", func(c *gin.Context) {
 			UpdatePosts(db, c)
 		})
 
-		PostsApi.POST("/delete", func(c *gin.Context) {
+		PostsApi.POST("/delete/:id", func(c *gin.Context) {
 			DeletePosts(db, c)
 		})
-	}*/
+		PostsApi.POST("/:id/comments", func(c *gin.Context) {
+			CreateComment(db, c)
+		})
+	}
 
 	router.Run(":8080")
 }
